@@ -1,43 +1,33 @@
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 import time
 import sys
-import logging
 
-# ログ設定
-logging.basicConfig(level=logging.DEBUG)
-
-logging.info("Starting Selenium WebDriver")
-options = webdriver.ChromeOptions()
-options.add_argument("--headless")
+# Selenium のオプションを設定（Cloud Run 用）
+options = Options()
+options.binary_location = "/usr/bin/chromium"  # Chromium のパスを指定
+options.add_argument("--headless")  # ヘッドレスモード
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
-driver = webdriver.Chrome(options=options)
+# ChromeDriver のパスを指定
+service = Service("/usr/bin/chromedriver")
+driver = webdriver.Chrome(service=service, options=options)
 
-try:
-    driver.get("https://chouseisan.com/")
-    logging.info("Opened chouseisan.com")
+driver.get("https://chouseisan.com/")
 
-    event_name = "2025年の調整"
-    date_list = "\n".join(sys.argv[1:])
+# イベント作成処理
+event_name = "2025年の調整"
+date_list = "\n".join(sys.argv[1:])
 
-    logging.debug(f"Setting event name: {event_name}")
-    logging.debug(f"Setting event dates: {date_list}")
+driver.find_element("id", "name").send_keys(event_name)
+driver.find_element("id", "kouho").send_keys(date_list)
+driver.find_element("id", "createBtn").click()
+time.sleep(3)
 
-    driver.find_element(By.ID, "name").send_keys(event_name)
-    driver.find_element(By.ID, "kouho").send_keys(date_list)
-    driver.find_element(By.ID, "createBtn").click()
-    time.sleep(3)
+# 作成されたイベントURLを取得
+event_url = driver.find_element("id", "listUrl").get_attribute("value")
+driver.quit()
 
-    # イベントURLの取得
-    event_url = driver.find_element(By.ID, "listUrl").get_attribute("value")
-    logging.info(f"Event URL: {event_url}")
-
-    print(event_url)  # ここで Cloud Run に渡される
-
-except Exception as e:
-    logging.exception("Error while creating event")
-    print("")  # Cloud Run に空の値を渡すと event_url が "" になる
-finally:
-    driver.quit()
+print(event_url)
