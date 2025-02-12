@@ -3,6 +3,16 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import time
 import sys
+import json
+
+# JSONデータの読み込み
+if len(sys.argv) > 1:
+    input_data = json.loads(sys.argv[1])
+    event_name = input_data.get("event_name", "イベント名未設定")
+    date_list = "\n".join(input_data.get("dates", []))
+else:
+    event_name = "イベント名未設定"
+    date_list = ""
 
 # Selenium のオプションを設定（Cloud Run 用）
 options = Options()
@@ -18,9 +28,6 @@ driver = webdriver.Chrome(service=service, options=options)
 driver.get("https://chouseisan.com/")
 
 # イベント作成処理
-event_name = "2025年の調整"
-date_list = "\n".join(sys.argv[1:])
-
 driver.find_element("id", "name").send_keys(event_name)
 driver.find_element("id", "kouho").send_keys(date_list)
 driver.find_element("id", "createBtn").click()

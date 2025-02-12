@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import subprocess
 import logging
+import json
 
 app = Flask(__name__)
 
@@ -20,15 +21,19 @@ def create_event():
         data = request.json
         logging.debug(f"Request JSON: {data}")
 
+        event_name = data.get("event_name", "イベント名未設定")
         date_list = data.get("dates", [])
+
+        logging.debug(f"Received event name: {event_name}")
         logging.debug(f"Received dates: {date_list}")
 
         if not date_list:
             logging.error("No dates provided")
             return jsonify({"error": "No dates provided"}), 400
 
-        # 調整さんを操作してイベント作成
-        result = subprocess.run(["python3", "chouseisan_bot.py", *date_list], capture_output=True, text=True)
+        # JSON形式で subprocess に渡す
+        input_data = json.dumps({"event_name": event_name, "dates": date_list})
+        result = subprocess.run(["python3", "chouseisan_bot.py", input_data], capture_output=True, text=True)
 
         logging.debug(f"Subprocess output: {result.stdout.strip()}")
         logging.error(f"Subprocess error: {result.stderr.strip()}") if result.stderr else None
