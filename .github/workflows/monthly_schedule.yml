@@ -1,9 +1,6 @@
 name: Monthly Schedule - 調整さん投稿
 
 on:
-  push:
-    branches:
-      - feature/github-actions-migration
   schedule:
     # 毎月15日 09:00 JST (= 00:00 UTC)
     - cron: '0 0 15 * *'
