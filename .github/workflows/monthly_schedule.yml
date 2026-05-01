@@ -1,0 +1,32 @@
+name: Monthly Schedule - 調整さん投稿
+
+on:
+  schedule:
+    # 毎月1日 09:00 JST (= 00:00 UTC)
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # 手動実行・テスト用
+
+jobs:
+  create-schedule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install selenium
+
+      - name: Run chouseisan bot & post to LINE
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+        run: python chouseisan_bot.py
