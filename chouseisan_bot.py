@@ -37,8 +37,7 @@ else:
     date_list  = "\n".join(dates)
 
 # ── 環境変数 ─────────────────────────────────────────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "")
-LINE_GROUP_ID = os.environ.get("LINE_GROUP_ID", "")
+GAS_WEBHOOK_URL = os.environ.get("GAS_WEBHOOK_URL", "")
 
 # ── Selenium セットアップ ────────────────────────────────────────────────
 options = Options()
@@ -47,18 +46,9 @@ options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 
-# CHROMIUM_PATH が設定されている場合のみ明示指定（Cloud Run用）
-# GitHub Actions では setup-chrome が自動でパスを通すため不要
-chromium_path = os.environ.get("CHROMIUM_PATH", "")
-if chromium_path:
-    options.binary_location = chromium_path
-
-chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "")
-service = Service(chromedriver_path) if chromedriver_path else Service()
-
 # ── 調整さんでイベント作成 ───────────────────────────────────────────────
 event_url = None
-driver = webdriver.Chrome(service=service, options=options)
+driver = webdriver.Chrome(options=options)
 try:
     driver.get("https://chouseisan.com/")
     driver.find_element("id", "name").send_keys(event_name)
@@ -77,32 +67,27 @@ except Exception as e:
 finally:
     driver.quit()
 
-# ── LINE グループに投稿 ──────────────────────────────────────────────────
-if event_url and LINE_TOKEN and LINE_GROUP_ID:
-    message = (
-        f"📅{next_year}年{next_month}月の日程調整📅\n"
-        "空いている日を以下のリンクから入力してください！\n\n"
-        f"{event_url}"
-    )
-
+# ── GASへ通知（LINE送信はGAS側で実施） ──────────────────────────────────
+if event_url and GAS_WEBHOOK_URL:
     body = json.dumps({
-        "to": LINE_GROUP_ID,
-        "messages": [{"type": "text", "text": message}]
+        "type": "github_actions_chouseisan",
+        "url": event_url,
+        "year": next_year,
+        "month": next_month
     }).encode("utf-8")
 
     req = urllib.request.Request(
-        "https://api.line.me/v2/bot/message/push",
+        GAS_WEBHOOK_URL,
         data=body,
         headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {LINE_TOKEN}",
+            "Content-Type": "application/json"
         },
         method="POST",
     )
     with urllib.request.urlopen(req) as resp:
-        print(f"LINE送信完了: HTTP {resp.status}")
+        print(f"GASへの通知完了: HTTP {resp.status}")
 else:
     if not event_url:
-        print("[SKIP] event_url が未取得のためLINE送信をスキップ")
+        print("[SKIP] event_url が未取得のためGASへの通知をスキップ")
     else:
-        print("[SKIP] LINE_TOKEN / LINE_GROUP_ID が未設定のためLINE送信をスキップ")
+        print("[SKIP] GAS_WEBHOOK_URL が未設定のためGASへの通知をスキップ")
